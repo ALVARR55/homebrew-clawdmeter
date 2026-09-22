@@ -9,8 +9,8 @@
 class Clawdmeter < Formula
   desc "Desk-side Claude Code usage monitor: BLE daemon for the Clawdmeter ESP32 display"
   homepage "https://github.com/ALVARR55/Clawdmeter"
-  url "https://github.com/ALVARR55/Clawdmeter/releases/download/v0.1.0/clawdmeter-daemon-macos.tar.gz"
-  sha256 "18d5f7e4d4044cbfbac63d783ad2bb00bef04d44f952a5388fc30c34d588b226"
+  url "https://github.com/ALVARR55/Clawdmeter/releases/download/v0.1.1/clawdmeter-daemon-macos.tar.gz"
+  sha256 "fe6d32218e4bc6f08baf8c6d0d9c3060952961c509fcd89ebb394b5785e6611b"
 
   depends_on :macos
   depends_on "python@3.12"
