@@ -7,8 +7,6 @@
 # the firmware images are separate release assets that `clawdmeter-flash`
 # downloads on demand).
 class Clawdmeter < Formula
-  include Language::Python::Virtualenv
-
   desc "Desk-side Claude Code usage monitor: BLE daemon for the Clawdmeter ESP32 display"
   homepage "https://github.com/ALVARR55/Clawdmeter"
   url "https://github.com/ALVARR55/Clawdmeter/releases/download/v0.1.0/clawdmeter-daemon-macos.tar.gz"
@@ -19,14 +17,20 @@ class Clawdmeter < Formula
 
   def install
     # bleak (CoreBluetooth via pyobjc) + httpx for the daemon, esptool for the
-    # flasher. Resolved from PyPI at install time rather than pinned as
-    # `resource` blocks: this is a personal tap and the daemon tracks current
-    # bleak/httpx releases; pinning ~a dozen transitive pyobjc wheels here
-    # would only make the formula go stale faster than the daemon.
-    venv = virtualenv_create(libexec, "python3.12")
-    venv.pip_install "bleak>=0.22"
-    venv.pip_install "httpx>=0.27"
-    venv.pip_install "esptool>=5"
+    # flasher, resolved from PyPI at install time — a personal-tap tradeoff
+    # over pinning ~a dozen transitive pyobjc `resource` blocks that would go
+    # stale faster than the daemon does.
+    #
+    # Plain venv + pip on purpose, not Homebrew's virtualenv_create/pip_install:
+    # that helper forces `--no-binary :all:` (build every package from sdist),
+    # and bleak's build backend (uv_build, Rust) and the pyobjc CoreBluetooth
+    # bindings aren't realistically buildable from source here. PyPI ships
+    # them as wheels; use the wheels. opt_bin keeps the venv's interpreter
+    # symlink valid across python@3.12 patch upgrades.
+    python = Formula["python@3.12"].opt_bin/"python3.12"
+    system python, "-m", "venv", libexec
+    system libexec/"bin/pip", "install", "--quiet", "--upgrade", "pip"
+    system libexec/"bin/pip", "install", "--quiet", "bleak>=0.22", "httpx>=0.27", "esptool>=5"
 
     libexec.install "daemon/claude_usage_daemon.py", "daemon/config.example", "flash-release.sh"
 
