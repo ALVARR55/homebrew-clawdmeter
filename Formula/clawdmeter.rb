@@ -27,7 +27,7 @@ class Clawdmeter < Formula
     # bindings aren't realistically buildable from source here. PyPI ships
     # them as wheels; use the wheels. opt_bin keeps the venv's interpreter
     # symlink valid across python@3.12 patch upgrades.
-    python = Formula["python@3.12"].opt_bin/"python3.12"
+    python = formula_opt_bin("python@3.12")/"python3.12"
     system python, "-m", "venv", libexec
     system libexec/"bin/pip", "install", "--quiet", "--upgrade", "pip"
     system libexec/"bin/pip", "install", "--quiet", "bleak>=0.22", "httpx>=0.27", "esptool>=5"
