@@ -47,7 +47,8 @@ class Clawdmeter < Formula
     SH
     (bin/"clawdmeter-flash").write <<~SH
       #!/bin/bash
-      # Point flash-release.sh at this formula's venv (it already has esptool).
+      # Point flash-release.sh at this formula's venv; it pip-installs esptool
+      # there on first use (see the install step for why not at build time).
       export CLAWDMETER_PYTHON="#{libexec}/bin/python"
       exec "#{libexec}/flash-release.sh" "$@"
     SH
