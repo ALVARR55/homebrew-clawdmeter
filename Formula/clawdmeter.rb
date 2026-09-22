@@ -1,15 +1,17 @@
 # Homebrew formula for the Clawdmeter macOS daemon.
 #
-# url / version / sha256 are rewritten by .github/workflows/update-formula.yml
-# whenever ALVARR55/Clawdmeter publishes a new release — edit them by hand only
-# to pin a specific version. The tarball is the release's
-# clawdmeter-daemon-macos.tar.gz (daemon + flasher; the firmware images are
-# separate release assets that `clawdmeter-flash` downloads on demand).
+# url / sha256 are rewritten by .github/workflows/update-formula.yml whenever
+# ALVARR55/Clawdmeter publishes a new release — edit them by hand only to pin
+# a specific version (Homebrew reads the version from the URL's tag). The
+# tarball is the release's clawdmeter-daemon-macos.tar.gz (daemon + flasher;
+# the firmware images are separate release assets that `clawdmeter-flash`
+# downloads on demand).
 class Clawdmeter < Formula
+  include Language::Python::Virtualenv
+
   desc "Desk-side Claude Code usage monitor: BLE daemon for the Clawdmeter ESP32 display"
   homepage "https://github.com/ALVARR55/Clawdmeter"
   url "https://github.com/ALVARR55/Clawdmeter/releases/download/v0.1.0/clawdmeter-daemon-macos.tar.gz"
-  version "0.1.0"
   sha256 "18d5f7e4d4044cbfbac63d783ad2bb00bef04d44f952a5388fc30c34d588b226"
 
   depends_on :macos

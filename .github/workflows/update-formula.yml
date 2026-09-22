@@ -39,12 +39,12 @@ jobs:
             exit 0
           fi
           sha=$(curl -fsSL "$url" | shasum -a 256 | cut -d' ' -f1)
+          # Homebrew derives the version from the URL's tag, so only url + sha256 change.
           sed -i -E \
             -e "s|^(  url \").*(\")$|\1${url}\2|" \
-            -e "s|^(  version \").*(\")$|\1${version}\2|" \
             -e "s|^(  sha256 \").*(\")$|\1${sha}\2|" \
             Formula/clawdmeter.rb
-          echo "--- result:"; grep -E '^  (url|version|sha256) ' Formula/clawdmeter.rb
+          echo "--- result:"; grep -E '^  (url|sha256) ' Formula/clawdmeter.rb
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git commit -am "clawdmeter ${version}"
