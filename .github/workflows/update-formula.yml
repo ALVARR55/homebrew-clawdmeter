@@ -1,0 +1,51 @@
+# Keeps Formula/clawdmeter.rb pointed at the latest ALVARR55/Clawdmeter release.
+#
+# Runs every 30 minutes and on demand (workflow_dispatch — the Clawdmeter
+# release workflow triggers it immediately when it has a TAP_TOKEN secret).
+# Reads the public release with the default token, so no secrets are needed.
+#
+# Note: GitHub disables scheduled workflows in repos with no activity for 60
+# days. If a release ever doesn't reach brew, run this workflow by hand from
+# the Actions tab (that also re-enables the schedule).
+name: Update formula
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "*/30 * * * *"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-formula
+  cancel-in-progress: false
+
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Bump to the latest Clawdmeter release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          tag=$(gh release view --repo ALVARR55/Clawdmeter --json tagName -q .tagName)
+          version="${tag#v}"
+          url="https://github.com/ALVARR55/Clawdmeter/releases/download/${tag}/clawdmeter-daemon-macos.tar.gz"
+          if grep -Fq "download/${tag}/" Formula/clawdmeter.rb; then
+            echo "Formula already at ${tag}; nothing to do."
+            exit 0
+          fi
+          sha=$(curl -fsSL "$url" | shasum -a 256 | cut -d' ' -f1)
+          sed -i -E \
+            -e "s|^(  url \").*(\")$|\1${url}\2|" \
+            -e "s|^(  version \").*(\")$|\1${version}\2|" \
+            -e "s|^(  sha256 \").*(\")$|\1${sha}\2|" \
+            Formula/clawdmeter.rb
+          echo "--- result:"; grep -E '^  (url|version|sha256) ' Formula/clawdmeter.rb
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "clawdmeter ${version}"
+          git push
