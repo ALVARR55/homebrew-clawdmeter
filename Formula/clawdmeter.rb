@@ -28,6 +28,9 @@ class Clawdmeter < Formula
     # them as wheels; use the wheels. opt_bin keeps the venv's interpreter
     # symlink valid across python@3.12 patch upgrades.
     #
+    # truststore lets the daemon verify TLS against the macOS Keychain, so it
+    # works behind corporate TLS-inspecting proxies (Zscaler etc.).
+    #
     # esptool is deliberately NOT installed here: flash-release.sh pip-installs
     # it into this venv on first use. Its bitstring->tibs dependency ships a
     # Rust-built .so whose Mach-O header has no room for Homebrew's install-name
@@ -37,7 +40,7 @@ class Clawdmeter < Formula
     python = formula_opt_bin("python@3.12")/"python3.12"
     system python, "-m", "venv", libexec
     system libexec/"bin/pip", "install", "--quiet", "--upgrade", "pip"
-    system libexec/"bin/pip", "install", "--quiet", "bleak>=0.22", "httpx>=0.27"
+    system libexec/"bin/pip", "install", "--quiet", "bleak>=0.22", "httpx>=0.27", "truststore>=0.9"
 
     libexec.install "daemon/claude_usage_daemon.py", "daemon/config.example", "flash-release.sh"
 
