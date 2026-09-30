@@ -9,8 +9,8 @@
 class Clawdmeter < Formula
   desc "Desk-side Claude Code usage monitor: BLE daemon for the Clawdmeter ESP32 display"
   homepage "https://github.com/ALVARR55/Clawdmeter"
-  url "https://github.com/ALVARR55/Clawdmeter/releases/download/v0.1.2/clawdmeter-daemon-macos.tar.gz"
-  sha256 "28b806ed499e98f76f0ef68475acf7e1bc14a6b83f62ffb443e23f3247b5e360"
+  url "https://github.com/ALVARR55/Clawdmeter/releases/download/v0.2.0/clawdmeter-daemon-macos.tar.gz"
+  sha256 "035ca651417094b90cc3b80299b3e8c99728ed167e4a3093a6aa59d08721f91f"
 
   depends_on :macos
   depends_on "python@3.12"
@@ -40,9 +40,15 @@ class Clawdmeter < Formula
     python = formula_opt_bin("python@3.12")/"python3.12"
     system python, "-m", "venv", libexec
     system libexec/"bin/pip", "install", "--quiet", "--upgrade", "pip"
-    system libexec/"bin/pip", "install", "--quiet", "bleak>=0.22", "httpx>=0.27", "truststore>=0.9"
+    system libexec/"bin/pip", "install", "--quiet", "bleak>=0.22", "httpx>=0.27", "truststore>=0.9",
+           "pystray>=0.19", "pillow>=10"
 
-    libexec.install "daemon/claude_usage_daemon.py", "daemon/config.example", "flash-release.sh"
+    # menubar_macos.py + icon_assets.py + logo_80.png: the menu-bar status icon
+    # (menubar = off in the config runs headless). All flat in libexec so the
+    # daemon's sibling imports and logo lookup work.
+    libexec.install "daemon/claude_usage_daemon.py", "daemon/menubar_macos.py",
+                    "daemon/icon_assets.py", "daemon/config.example",
+                    "assets/logo_80.png", "flash-release.sh"
 
     (bin/"clawdmeter-daemon").write <<~SH
       #!/bin/bash
@@ -55,15 +61,56 @@ class Clawdmeter < Formula
       export CLAWDMETER_PYTHON="#{libexec}/bin/python"
       exec "#{libexec}/flash-release.sh" "$@"
     SH
+    # One-time setup after `brew install`: a formula can't start services or
+    # prompt for permissions during install, so this script starts the login
+    # service and watches its log for the Bluetooth outcome. The permission
+    # belongs to the process macOS holds "responsible", and a launchd service
+    # is responsible for itself — so the "Python may use Bluetooth?" prompt
+    # appears here, as the service starts. (Running the daemon from Terminal
+    # first would only grant Terminal.) Safe to re-run; it restarts the service.
+    (bin/"clawdmeter-setup").write <<~SH
+      #!/bin/bash
+      set -u
+      log="#{var}/log/clawdmeter.log"
+      echo "Clawdmeter setup: starting the login service."
+      echo "If macOS asks whether \"Python\" may use Bluetooth, click Allow (one time)."
+      off=$(stat -f %z "$log" 2>/dev/null || echo 0)
+      brew services restart clawdmeter >/dev/null
+      verdict=""
+      for _ in $(seq 1 45); do
+        new=$(tail -c +$((off + 1)) "$log" 2>/dev/null || true)
+        if printf '%s' "$new" | grep -qE "Found system-connected|Device not held by OS|Connected$"; then
+          verdict=ok; break
+        fi
+        if printf '%s' "$new" | grep -q "CoreBluetooth unavailable"; then
+          verdict=denied; break
+        fi
+        sleep 1
+      done
+      case "$verdict" in
+        ok)     echo "Bluetooth OK." ;;
+        denied) echo "Bluetooth is denied or switched off. Enable 'Python' under System Settings >"
+                echo "Privacy & Security > Bluetooth (or turn Bluetooth on); the service retries by itself." ;;
+        *)      echo "No Bluetooth response after 45 s. If a permission prompt is showing, click Allow;"
+                echo "the service keeps retrying on its own. Log: $log" ;;
+      esac
+      echo ""
+      echo "A Clawdmeter icon is now in the menu bar (amber until a board connects)."
+      echo "Pair the board: System Settings -> Bluetooth -> Connect \"Clawdmeter\"."
+      echo "Make sure Claude Code is logged in on this Mac (claude auth login)."
+    SH
     chmod 0755, bin/"clawdmeter-daemon"
     chmod 0755, bin/"clawdmeter-flash"
+    chmod 0755, bin/"clawdmeter-setup"
   end
 
   # Login service, same shape as the checkout install's LaunchAgent: start at
-  # login, restart if it dies. Logs go to $(brew --prefix)/var/log/clawdmeter.log.
+  # login, restart if it crashes — but NOT after a clean exit, so "Quit" in the
+  # menu-bar icon actually stays quit until the next login.
+  # Logs go to $(brew --prefix)/var/log/clawdmeter.log.
   service do
     run [opt_bin/"clawdmeter-daemon"]
-    keep_alive true
+    keep_alive successful_exit: false
     log_path var/"log/clawdmeter.log"
     error_log_path var/"log/clawdmeter.log"
     environment_variables PATH: std_service_path_env
@@ -71,12 +118,14 @@ class Clawdmeter < Formula
 
   def caveats
     <<~EOS
-      macOS only shows the Bluetooth permission prompt for a foreground process,
-      so run the daemon once by hand first, click Allow, then Ctrl-C:
-        clawdmeter-daemon
+      Finish setup with one command — it starts the login service (auto-starts,
+      restarts on failure) and reports whether Bluetooth is reachable. Click
+      Allow when macOS asks whether "Python" may use Bluetooth:
+        clawdmeter-setup
 
-      Then start it as a login service (auto-starts, restarts on failure):
-        brew services start clawdmeter
+      A Clawdmeter icon appears in the menu bar: green = board receiving data,
+      amber = waiting for the board, red = Claude Code not logged in. Set
+      `menubar = off` in ~/.config/claude-usage-monitor/config to run headless.
 
       Pair the board: System Settings -> Bluetooth -> Connect "Clawdmeter".
       The daemon reads your Claude Code login from the Keychain, so `claude`
@@ -95,7 +144,10 @@ class Clawdmeter < Formula
   end
 
   test do
-    system libexec/"bin/python", "-c", "import bleak, httpx"
+    system libexec/"bin/python", "-c", "import bleak, httpx, pystray, PIL, truststore"
+    assert_predicate bin/"clawdmeter-setup", :executable?
+    assert_predicate libexec/"menubar_macos.py", :exist?
+    assert_predicate libexec/"logo_80.png", :exist?
     assert_match "Usage:", shell_output("#{bin}/clawdmeter-flash 2>&1", 1)
     assert_match "waveshare_amoled_216_c6", shell_output("#{bin}/clawdmeter-flash 2>&1", 1)
   end
