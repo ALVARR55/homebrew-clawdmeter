@@ -9,8 +9,8 @@
 class Clawdmeter < Formula
   desc "Desk-side Claude Code usage monitor: BLE daemon for the Clawdmeter ESP32 display"
   homepage "https://github.com/ALVARR55/Clawdmeter"
-  url "https://github.com/ALVARR55/Clawdmeter/releases/download/v0.3.0/clawdmeter-daemon-macos.tar.gz"
-  sha256 "543d2df3170b1bea0979b43d60390ea1f47217c58ec897efdcb1358e0c6e510a"
+  url "https://github.com/ALVARR55/Clawdmeter/releases/download/v0.4.0/clawdmeter-daemon-macos.tar.gz"
+  sha256 "6d87611cc48850f6125fef60ff6a370bf846e7ddfeb0c264ccec49e7811109c1"
 
   depends_on :macos
   depends_on "python@3.12"
@@ -95,6 +95,8 @@ class Clawdmeter < Formula
                 echo "the service keeps retrying on its own. Log: $log" ;;
       esac
       echo ""
+      "#{opt_bin}/clawdmeter-daemon" --install-hooks
+      echo ""
       echo "A Clawdmeter icon is now in the menu bar (amber until a board connects)."
       echo "Pair the board: System Settings -> Bluetooth -> Connect \"Clawdmeter\"."
       echo "Make sure Claude Code is logged in on this Mac (claude auth login)."
@@ -122,6 +124,9 @@ class Clawdmeter < Formula
       restarts on failure) and reports whether Bluetooth is reachable. Click
       Allow when macOS asks whether "Python" may use Bluetooth:
         clawdmeter-setup
+
+      It also adds three Claude Code hooks (~/.claude/settings.json) so the board
+      shows "Claude needs you" / "Done"; `clawdmeter-daemon --remove-hooks` undoes that.
 
       A Clawdmeter icon appears in the menu bar: green = board receiving data,
       amber = waiting for the board, red = Claude Code not logged in. Set
