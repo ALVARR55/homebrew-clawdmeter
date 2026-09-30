@@ -9,8 +9,8 @@
 class Clawdmeter < Formula
   desc "Desk-side Claude Code usage monitor: BLE daemon for the Clawdmeter ESP32 display"
   homepage "https://github.com/ALVARR55/Clawdmeter"
-  url "https://github.com/ALVARR55/Clawdmeter/releases/download/v0.2.0/clawdmeter-daemon-macos.tar.gz"
-  sha256 "035ca651417094b90cc3b80299b3e8c99728ed167e4a3093a6aa59d08721f91f"
+  url "https://github.com/ALVARR55/Clawdmeter/releases/download/v0.3.0/clawdmeter-daemon-macos.tar.gz"
+  sha256 "543d2df3170b1bea0979b43d60390ea1f47217c58ec897efdcb1358e0c6e510a"
 
   depends_on :macos
   depends_on "python@3.12"
@@ -132,7 +132,9 @@ class Clawdmeter < Formula
       must be logged in on this Mac; it posts a notification if that expires.
 
       Flash a board with the matching release firmware (no PlatformIO needed):
-        clawdmeter-flash waveshare_amoled_216_c6      # run with no args to list boards
+        clawdmeter-flash waveshare_amoled_216_c6 --name Ricardo   # no args lists boards
+      --name gives the board a unique Bluetooth name (Clawdmeter-Ricardo); rename
+      later with `clawdmeter-flash --name <suffix>`.
 
       If you previously installed from a checkout or the release tarball, stop
       that LaunchAgent so two daemons don't fight over the board:
